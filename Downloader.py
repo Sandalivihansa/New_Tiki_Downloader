@@ -1,38 +1,26 @@
-import asyncio
-import yt_dlp
-from telegram import Update
+import instaloader
 
 
+# Instagram media yuklab olish funksiyasi
+async def download_instagram_media(url):
+    loader = instaloader.Instaloader()
 
-# Asenkron video yuklab olish funksiyasi
-async def download_video(url, download_path):
-    ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',  # Eng yuqori sifatdagi video va audio
-        'outtmpl': download_path,  # Fayl saqlanadigan joy
-        'quiet': True  # Ogohlantirishlarni o'chirish
-    }
-    ydl = yt_dlp.YoutubeDL(ydl_opts)
-    await asyncio.to_thread(ydl.download, [url])  # Asenkron tarzda yuklab olish
+    # URL orqali postni olish
+    shortcode = url.split("/")[-2]  # URLdan shortcode ajratib olish
+    post = instaloader.Post.from_shortcode(loader.context, shortcode)
 
+    media_files = []
 
-# Parallel ravishda bir nechta URLni yuklab olish
-async def handle_multiple_urls(update: Update, context):
-    urls = update.message.text.split()  # Bir nechta URLlarni olish
-    tasks = []  # Parallel yuklab olish vazifalari uchun ro'yxat
+    if post.typename == "GraphSidecar":  # Karusel media turi
+        for node in post.get_sidecar_nodes():
+            if node.is_video:
+                media_files.append((node.video_url, 'video/mp4'))
+            else:
+                media_files.append((node.display_url, 'image/jpeg'))
+    else:  # Yagona media (rasm yoki video)
+        if post.is_video:
+            media_files.append((post.video_url, 'video/mp4'))
+        else:
+            media_files.append((post.url, 'image/jpeg'))
 
-    # Har bir URL uchun yuklab olish vazifasini yaratish
-    for url in urls:
-        download_path = f'/tmp/{url.split("/")[-1]}.%(ext)s'
-        tasks.append(download_video(url, download_path))
-
-    # Barcha yuklab olishlarni parallel bajarish
-    await asyncio.gather(*tasks)
-
-    # Foydalanuvchiga muvaffaqiyatli javob berish
-    await update.message.reply_text("Barcha videolar yuklab olindi va yuborildi!")
-
-
-
-
-
-
+    return media_files

@@ -1,11 +1,13 @@
-from video_sender import video_sender
+from validators import url
+from video_sender import send_video
+
 
 async def message_handler(update, context):
     text = update.message.text
     user = update.effective_user
 
-    if text:
-        await video_sender(update, text)
+    if url(text):
+        await send_video(update,context)
 
     else:
         await context.bot.send_message(text="<b>Video url yuboring!</b>", chat_id=user.id, parse_mode='HTML')
